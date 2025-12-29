@@ -17,7 +17,7 @@ export function ScopeInput({ value, onChange }: ScopeInputProps) {
   return (
     <div className="space-y-3">
       <label className="text-sm font-medium text-foreground">
-        Scope <span className="text-muted-foreground">(optional)</span>
+        Escopo <span className="text-muted-foreground">(opcional)</span>
       </label>
       
       <div className="relative">
@@ -27,7 +27,7 @@ export function ScopeInput({ value, onChange }: ScopeInputProps) {
           onChange={(e) => onChange(e.target.value.toLowerCase().replace(/\s/g, "-"))}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setTimeout(() => setIsFocused(false), 150)}
-          placeholder="e.g., auth, api, ui"
+          placeholder="ex: auth, api, ui"
           className={cn(
             "w-full h-10 px-3 rounded-lg border bg-card font-mono text-sm",
             "placeholder:text-muted-foreground",

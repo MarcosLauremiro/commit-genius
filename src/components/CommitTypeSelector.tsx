@@ -10,13 +10,13 @@ import {
 } from "lucide-react";
 
 const commitTypes = [
-  { value: "feat", label: "feat", description: "New feature", icon: Sparkles, color: "text-emerald-500" },
-  { value: "fix", label: "fix", description: "Bug fix", icon: Bug, color: "text-red-400" },
-  { value: "refactor", label: "refactor", description: "Code refactor", icon: RefreshCw, color: "text-amber-500" },
-  { value: "chore", label: "chore", description: "Maintenance", icon: Wrench, color: "text-slate-400" },
-  { value: "docs", label: "docs", description: "Documentation", icon: FileText, color: "text-blue-400" },
-  { value: "test", label: "test", description: "Tests", icon: TestTube, color: "text-purple-400" },
-  { value: "style", label: "style", description: "Styling", icon: Palette, color: "text-pink-400" },
+  { value: "feat", label: "feat", description: "Nova funcionalidade", icon: Sparkles, color: "text-emerald-500" },
+  { value: "fix", label: "fix", description: "Correção de bug", icon: Bug, color: "text-red-400" },
+  { value: "refactor", label: "refactor", description: "Refatoração", icon: RefreshCw, color: "text-amber-500" },
+  { value: "chore", label: "chore", description: "Manutenção", icon: Wrench, color: "text-slate-400" },
+  { value: "docs", label: "docs", description: "Documentação", icon: FileText, color: "text-blue-400" },
+  { value: "test", label: "test", description: "Testes", icon: TestTube, color: "text-purple-400" },
+  { value: "style", label: "style", description: "Estilos", icon: Palette, color: "text-pink-400" },
 ];
 
 interface CommitTypeSelectorProps {
@@ -28,7 +28,7 @@ export function CommitTypeSelector({ value, onChange }: CommitTypeSelectorProps)
   return (
     <div className="space-y-3">
       <label className="text-sm font-medium text-foreground">
-        Type of change <span className="text-destructive">*</span>
+        Tipo de mudança <span className="text-destructive">*</span>
       </label>
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
         {commitTypes.map((type) => {

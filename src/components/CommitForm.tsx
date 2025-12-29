@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CommitTypeSelector } from "./CommitTypeSelector";
 import { ScopeInput } from "./ScopeInput";
+import { ToneSelector } from "./ToneSelector";
 import { CommitOutput } from "./CommitOutput";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,7 @@ interface FormData {
   description: string;
   reason: string;
   breakingChange: boolean;
+  tone: string;
 }
 
 export function CommitForm() {
@@ -22,9 +24,9 @@ export function CommitForm() {
     description: "",
     reason: "",
     breakingChange: false,
+    tone: "professional",
   });
   const [generatedMessage, setGeneratedMessage] = useState("");
-  const [tone, setTone] = useState<"short" | "detailed">("short");
   const [isLoading, setIsLoading] = useState(false);
 
   const generateCommitMessage = () => {
@@ -35,73 +37,135 @@ export function CommitForm() {
 
     setIsLoading(true);
 
-    // Simulate AI generation (in production, this would call the backend)
     setTimeout(() => {
       const breakingPrefix = formData.breakingChange ? "!" : "";
       const scopePart = formData.scope ? `(${formData.scope})` : "";
       
-      // Generate a professional commit message
       let description = formData.description.trim();
       
-      // Convert to imperative mood if needed
-      const imperativeVerbs: Record<string, string> = {
+      // Convert Portuguese verbs to English imperative
+      const verbMappings: Record<string, string> = {
         "adicionei": "add",
         "adicionado": "add",
         "adicionando": "add",
+        "adicionar": "add",
         "corrigi": "fix",
         "corrigido": "fix",
         "corrigindo": "fix",
+        "corrigir": "fix",
         "atualizei": "update",
         "atualizado": "update",
         "atualizando": "update",
+        "atualizar": "update",
         "removi": "remove",
         "removido": "remove",
         "removendo": "remove",
+        "remover": "remove",
         "mudei": "change",
         "mudado": "change",
         "mudando": "change",
+        "mudar": "change",
         "criei": "create",
         "criado": "create",
         "criando": "create",
+        "criar": "create",
         "implementei": "implement",
         "implementado": "implement",
         "implementando": "implement",
-        "added": "add",
-        "adding": "add",
-        "fixed": "fix",
-        "fixing": "fix",
-        "updated": "update",
-        "updating": "update",
-        "removed": "remove",
-        "removing": "remove",
-        "changed": "change",
-        "changing": "change",
-        "created": "create",
-        "creating": "create",
-        "implemented": "implement",
-        "implementing": "implement",
+        "implementar": "implement",
+        "melhorei": "improve",
+        "melhorado": "improve",
+        "melhorando": "improve",
+        "melhorar": "improve",
+        "refatorei": "refactor",
+        "refatorado": "refactor",
+        "refatorando": "refactor",
+        "refatorar": "refactor",
       };
 
-      // Process the description
       let processedDesc = description.toLowerCase();
-      for (const [past, imperative] of Object.entries(imperativeVerbs)) {
-        if (processedDesc.startsWith(past)) {
-          processedDesc = processedDesc.replace(past, imperative);
+      let foundVerb = false;
+      
+      for (const [pt, en] of Object.entries(verbMappings)) {
+        if (processedDesc.startsWith(pt + " ")) {
+          processedDesc = en + processedDesc.slice(pt.length);
+          foundVerb = true;
           break;
         }
       }
 
-      // Capitalize first letter
-      processedDesc = processedDesc.charAt(0).toLowerCase() + processedDesc.slice(1);
+      // If no verb found, try to add appropriate verb based on commit type
+      if (!foundVerb) {
+        const typeVerbs: Record<string, string> = {
+          feat: "add",
+          fix: "fix",
+          refactor: "refactor",
+          chore: "update",
+          docs: "update",
+          test: "add",
+          style: "improve",
+        };
+        const verb = typeVerbs[formData.type] || "update";
+        processedDesc = `${verb} ${processedDesc}`;
+      }
 
-      let message = `${formData.type}${scopePart}${breakingPrefix}: ${processedDesc}`;
+      let message = "";
 
-      if (tone === "detailed" && formData.reason) {
-        message += `\n\n${formData.reason}`;
+      switch (formData.tone) {
+        case "minimal":
+          // No conventional commit format, just the description
+          message = processedDesc;
+          break;
+          
+        case "casual":
+          // Simple conventional commit
+          message = `${formData.type}${scopePart}${breakingPrefix}: ${processedDesc}`;
+          break;
+          
+        case "professional":
+          // Formal conventional commit with proper capitalization
+          const formalDesc = processedDesc.charAt(0).toUpperCase() + processedDesc.slice(1);
+          message = `${formData.type}${scopePart}${breakingPrefix}: ${formalDesc}`;
+          if (formData.reason) {
+            message += `\n\nReason: ${formData.reason}`;
+          }
+          break;
+          
+        case "detailed":
+          // Full conventional commit with body
+          const detailedDesc = processedDesc.charAt(0).toUpperCase() + processedDesc.slice(1);
+          message = `${formData.type}${scopePart}${breakingPrefix}: ${detailedDesc}`;
+          
+          if (formData.reason) {
+            message += `\n\n${formData.reason}`;
+          }
+          
+          // Add context based on type
+          const typeContext: Record<string, string> = {
+            feat: "This commit introduces new functionality.",
+            fix: "This commit resolves an existing issue.",
+            refactor: "This commit improves code structure without changing behavior.",
+            chore: "This commit includes maintenance work.",
+            docs: "This commit updates documentation.",
+            test: "This commit adds or modifies tests.",
+            style: "This commit includes styling changes.",
+          };
+          
+          if (typeContext[formData.type]) {
+            message += `\n\n${typeContext[formData.type]}`;
+          }
+          break;
+          
+        default:
+          message = `${formData.type}${scopePart}${breakingPrefix}: ${processedDesc}`;
       }
 
       if (formData.breakingChange) {
-        message += `\n\nBREAKING CHANGE: Este commit introduz mudanças incompatíveis`;
+        if (formData.tone === "minimal") {
+          message += " [BREAKING]";
+        } else {
+          message += "\n\nBREAKING CHANGE: This commit introduces breaking changes that may affect existing functionality.";
+        }
       }
 
       setGeneratedMessage(message);
@@ -112,14 +176,6 @@ export function CommitForm() {
 
   const handleRegenerate = () => {
     generateCommitMessage();
-  };
-
-  const handleToneChange = (newTone: "short" | "detailed") => {
-    setTone(newTone);
-    if (generatedMessage) {
-      // Regenerate with new tone
-      setTimeout(() => generateCommitMessage(), 100);
-    }
   };
 
   return (
@@ -174,6 +230,12 @@ export function CommitForm() {
         />
       </div>
 
+      {/* Tone Selector */}
+      <ToneSelector
+        value={formData.tone}
+        onChange={(tone) => setFormData((prev) => ({ ...prev, tone }))}
+      />
+
       {/* Breaking Change */}
       <div className="flex items-center gap-3">
         <button
@@ -207,8 +269,6 @@ export function CommitForm() {
       <CommitOutput
         message={generatedMessage}
         onRegenerate={handleRegenerate}
-        onToneChange={handleToneChange}
-        tone={tone}
         isLoading={isLoading}
       />
     </div>

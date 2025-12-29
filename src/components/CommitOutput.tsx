@@ -1,22 +1,18 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, RefreshCw, Minimize2, Maximize2 } from "lucide-react";
+import { Copy, Check, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface CommitOutputProps {
   message: string;
   onRegenerate: () => void;
-  onToneChange: (tone: "short" | "detailed") => void;
-  tone: "short" | "detailed";
   isLoading: boolean;
 }
 
 export function CommitOutput({ 
   message, 
   onRegenerate, 
-  onToneChange, 
-  tone, 
   isLoading 
 }: CommitOutputProps) {
   const [copied, setCopied] = useState(false);
@@ -40,27 +36,6 @@ export function CommitOutput({
         <label className="text-sm font-medium text-foreground">
           Commit Gerado
         </label>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onToneChange(tone === "short" ? "detailed" : "short")}
-            disabled={isLoading}
-            className="text-xs gap-1.5"
-          >
-            {tone === "short" ? (
-              <>
-                <Maximize2 className="h-3.5 w-3.5" />
-                Mais detalhado
-              </>
-            ) : (
-              <>
-                <Minimize2 className="h-3.5 w-3.5" />
-                Mais conciso
-              </>
-            )}
-          </Button>
-        </div>
       </div>
 
       <div className={cn(

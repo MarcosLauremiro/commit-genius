@@ -4,7 +4,7 @@ import { CommitTypeSelector } from "./CommitTypeSelector";
 import { ScopeInput } from "./ScopeInput";
 import { ToneSelector } from "./ToneSelector";
 import { CommitOutput } from "./CommitOutput";
-import { Sparkles, AlertTriangle } from "lucide-react";
+import { Sparkles, AlertTriangle, CloudOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -15,6 +15,154 @@ interface FormData {
   reason: string;
   breakingChange: boolean;
   tone: string;
+}
+
+// Função que será usada para chamar a IA via edge function
+async function generateWithAI(formData: FormData): Promise<string> {
+  // TODO: Implementar chamada para edge function com Lovable AI
+  // Exemplo de como será a chamada:
+  // const response = await supabase.functions.invoke('generate-commit', {
+  //   body: { 
+  //     type: formData.type,
+  //     scope: formData.scope,
+  //     description: formData.description,
+  //     reason: formData.reason,
+  //     breakingChange: formData.breakingChange,
+  //     tone: formData.tone
+  //   }
+  // });
+  // return response.data.message;
+  
+  throw new Error("AI_NOT_CONFIGURED");
+}
+
+// Fallback local para quando a IA não está configurada
+function generateLocalFallback(formData: FormData): string {
+  const breakingPrefix = formData.breakingChange ? "!" : "";
+  const scopePart = formData.scope ? `(${formData.scope})` : "";
+  
+  let description = formData.description.trim();
+  
+  // Mapeamento de verbos PT -> EN
+  const verbMappings: Record<string, string> = {
+    "adicionei": "add",
+    "adicionado": "add",
+    "adicionando": "add",
+    "adicionar": "add",
+    "corrigi": "fix",
+    "corrigido": "fix",
+    "corrigindo": "fix",
+    "corrigir": "fix",
+    "atualizei": "update",
+    "atualizado": "update",
+    "atualizando": "update",
+    "atualizar": "update",
+    "removi": "remove",
+    "removido": "remove",
+    "removendo": "remove",
+    "remover": "remove",
+    "mudei": "change",
+    "mudado": "change",
+    "mudando": "change",
+    "mudar": "change",
+    "criei": "create",
+    "criado": "create",
+    "criando": "create",
+    "criar": "create",
+    "implementei": "implement",
+    "implementado": "implement",
+    "implementando": "implement",
+    "implementar": "implement",
+    "melhorei": "improve",
+    "melhorado": "improve",
+    "melhorando": "improve",
+    "melhorar": "improve",
+    "refatorei": "refactor",
+    "refatorado": "refactor",
+    "refatorando": "refactor",
+    "refatorar": "refactor",
+  };
+
+  let processedDesc = description.toLowerCase();
+  let foundVerb = false;
+  
+  for (const [pt, en] of Object.entries(verbMappings)) {
+    if (processedDesc.startsWith(pt + " ")) {
+      processedDesc = en + processedDesc.slice(pt.length);
+      foundVerb = true;
+      break;
+    }
+  }
+
+  if (!foundVerb) {
+    const typeVerbs: Record<string, string> = {
+      feat: "add",
+      fix: "fix",
+      refactor: "refactor",
+      chore: "update",
+      docs: "update",
+      test: "add",
+      style: "improve",
+    };
+    const verb = typeVerbs[formData.type] || "update";
+    processedDesc = `${verb} ${processedDesc}`;
+  }
+
+  let message = "";
+
+  switch (formData.tone) {
+    case "minimal":
+      message = processedDesc;
+      break;
+      
+    case "casual":
+      message = `${formData.type}${scopePart}${breakingPrefix}: ${processedDesc}`;
+      break;
+      
+    case "professional":
+      const formalDesc = processedDesc.charAt(0).toUpperCase() + processedDesc.slice(1);
+      message = `${formData.type}${scopePart}${breakingPrefix}: ${formalDesc}`;
+      if (formData.reason) {
+        message += `\n\nReason: ${formData.reason}`;
+      }
+      break;
+      
+    case "detailed":
+      const detailedDesc = processedDesc.charAt(0).toUpperCase() + processedDesc.slice(1);
+      message = `${formData.type}${scopePart}${breakingPrefix}: ${detailedDesc}`;
+      
+      if (formData.reason) {
+        message += `\n\n${formData.reason}`;
+      }
+      
+      const typeContext: Record<string, string> = {
+        feat: "This commit introduces new functionality.",
+        fix: "This commit resolves an existing issue.",
+        refactor: "This commit improves code structure without changing behavior.",
+        chore: "This commit includes maintenance work.",
+        docs: "This commit updates documentation.",
+        test: "This commit adds or modifies tests.",
+        style: "This commit includes styling changes.",
+      };
+      
+      if (typeContext[formData.type]) {
+        message += `\n\n${typeContext[formData.type]}`;
+      }
+      break;
+      
+    default:
+      message = `${formData.type}${scopePart}${breakingPrefix}: ${processedDesc}`;
+  }
+
+  if (formData.breakingChange) {
+    if (formData.tone === "minimal") {
+      message += " [BREAKING]";
+    } else {
+      message += "\n\nBREAKING CHANGE: This commit introduces breaking changes that may affect existing functionality.";
+    }
+  }
+
+  return message;
 }
 
 export function CommitForm() {
@@ -28,8 +176,9 @@ export function CommitForm() {
   });
   const [generatedMessage, setGeneratedMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isAIEnabled, setIsAIEnabled] = useState(false);
 
-  const generateCommitMessage = () => {
+  const generateCommitMessage = async () => {
     if (!formData.type || !formData.description.trim()) {
       toast.error("Por favor, preencha os campos obrigatórios");
       return;
@@ -37,141 +186,28 @@ export function CommitForm() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      const breakingPrefix = formData.breakingChange ? "!" : "";
-      const scopePart = formData.scope ? `(${formData.scope})` : "";
-      
-      let description = formData.description.trim();
-      
-      // Convert Portuguese verbs to English imperative
-      const verbMappings: Record<string, string> = {
-        "adicionei": "add",
-        "adicionado": "add",
-        "adicionando": "add",
-        "adicionar": "add",
-        "corrigi": "fix",
-        "corrigido": "fix",
-        "corrigindo": "fix",
-        "corrigir": "fix",
-        "atualizei": "update",
-        "atualizado": "update",
-        "atualizando": "update",
-        "atualizar": "update",
-        "removi": "remove",
-        "removido": "remove",
-        "removendo": "remove",
-        "remover": "remove",
-        "mudei": "change",
-        "mudado": "change",
-        "mudando": "change",
-        "mudar": "change",
-        "criei": "create",
-        "criado": "create",
-        "criando": "create",
-        "criar": "create",
-        "implementei": "implement",
-        "implementado": "implement",
-        "implementando": "implement",
-        "implementar": "implement",
-        "melhorei": "improve",
-        "melhorado": "improve",
-        "melhorando": "improve",
-        "melhorar": "improve",
-        "refatorei": "refactor",
-        "refatorado": "refactor",
-        "refatorando": "refactor",
-        "refatorar": "refactor",
-      };
-
-      let processedDesc = description.toLowerCase();
-      let foundVerb = false;
-      
-      for (const [pt, en] of Object.entries(verbMappings)) {
-        if (processedDesc.startsWith(pt + " ")) {
-          processedDesc = en + processedDesc.slice(pt.length);
-          foundVerb = true;
-          break;
-        }
-      }
-
-      // If no verb found, try to add appropriate verb based on commit type
-      if (!foundVerb) {
-        const typeVerbs: Record<string, string> = {
-          feat: "add",
-          fix: "fix",
-          refactor: "refactor",
-          chore: "update",
-          docs: "update",
-          test: "add",
-          style: "improve",
-        };
-        const verb = typeVerbs[formData.type] || "update";
-        processedDesc = `${verb} ${processedDesc}`;
-      }
-
-      let message = "";
-
-      switch (formData.tone) {
-        case "minimal":
-          // No conventional commit format, just the description
-          message = processedDesc;
-          break;
-          
-        case "casual":
-          // Simple conventional commit
-          message = `${formData.type}${scopePart}${breakingPrefix}: ${processedDesc}`;
-          break;
-          
-        case "professional":
-          // Formal conventional commit with proper capitalization
-          const formalDesc = processedDesc.charAt(0).toUpperCase() + processedDesc.slice(1);
-          message = `${formData.type}${scopePart}${breakingPrefix}: ${formalDesc}`;
-          if (formData.reason) {
-            message += `\n\nReason: ${formData.reason}`;
-          }
-          break;
-          
-        case "detailed":
-          // Full conventional commit with body
-          const detailedDesc = processedDesc.charAt(0).toUpperCase() + processedDesc.slice(1);
-          message = `${formData.type}${scopePart}${breakingPrefix}: ${detailedDesc}`;
-          
-          if (formData.reason) {
-            message += `\n\n${formData.reason}`;
-          }
-          
-          // Add context based on type
-          const typeContext: Record<string, string> = {
-            feat: "This commit introduces new functionality.",
-            fix: "This commit resolves an existing issue.",
-            refactor: "This commit improves code structure without changing behavior.",
-            chore: "This commit includes maintenance work.",
-            docs: "This commit updates documentation.",
-            test: "This commit adds or modifies tests.",
-            style: "This commit includes styling changes.",
-          };
-          
-          if (typeContext[formData.type]) {
-            message += `\n\n${typeContext[formData.type]}`;
-          }
-          break;
-          
-        default:
-          message = `${formData.type}${scopePart}${breakingPrefix}: ${processedDesc}`;
-      }
-
-      if (formData.breakingChange) {
-        if (formData.tone === "minimal") {
-          message += " [BREAKING]";
-        } else {
-          message += "\n\nBREAKING CHANGE: This commit introduces breaking changes that may affect existing functionality.";
-        }
-      }
-
+    try {
+      // Tenta usar IA primeiro
+      const message = await generateWithAI(formData);
       setGeneratedMessage(message);
+      setIsAIEnabled(true);
+      toast.success("Mensagem gerada com IA!");
+    } catch (error) {
+      // Se IA não está configurada, usa fallback local
+      if (error instanceof Error && error.message === "AI_NOT_CONFIGURED") {
+        const message = generateLocalFallback(formData);
+        setGeneratedMessage(message);
+        setIsAIEnabled(false);
+        toast.info("Gerado localmente (IA não configurada)", {
+          description: "Conecte ao Lovable Cloud para usar IA real",
+        });
+      } else {
+        toast.error("Erro ao gerar mensagem");
+        console.error(error);
+      }
+    } finally {
       setIsLoading(false);
-      toast.success("Mensagem de commit gerada!");
-    }, 800);
+    }
   };
 
   const handleRegenerate = () => {
@@ -180,6 +216,16 @@ export function CommitForm() {
 
   return (
     <div className="space-y-8">
+      {/* AI Status Banner */}
+      {!isAIEnabled && generatedMessage && (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border text-sm animate-fade-in">
+          <CloudOff className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <p className="text-muted-foreground">
+            Usando geração local. Conecte ao <strong>Lovable Cloud</strong> para mensagens mais inteligentes com IA.
+          </p>
+        </div>
+      )}
+
       {/* Commit Type */}
       <CommitTypeSelector
         value={formData.type}

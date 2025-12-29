@@ -29,7 +29,7 @@ export function CommitForm() {
 
   const generateCommitMessage = () => {
     if (!formData.type || !formData.description.trim()) {
-      toast.error("Please fill in the required fields");
+      toast.error("Por favor, preencha os campos obrigatórios");
       return;
     }
 
@@ -45,6 +45,27 @@ export function CommitForm() {
       
       // Convert to imperative mood if needed
       const imperativeVerbs: Record<string, string> = {
+        "adicionei": "add",
+        "adicionado": "add",
+        "adicionando": "add",
+        "corrigi": "fix",
+        "corrigido": "fix",
+        "corrigindo": "fix",
+        "atualizei": "update",
+        "atualizado": "update",
+        "atualizando": "update",
+        "removi": "remove",
+        "removido": "remove",
+        "removendo": "remove",
+        "mudei": "change",
+        "mudado": "change",
+        "mudando": "change",
+        "criei": "create",
+        "criado": "create",
+        "criando": "create",
+        "implementei": "implement",
+        "implementado": "implement",
+        "implementando": "implement",
         "added": "add",
         "adding": "add",
         "fixed": "fix",
@@ -80,12 +101,12 @@ export function CommitForm() {
       }
 
       if (formData.breakingChange) {
-        message += `\n\nBREAKING CHANGE: This commit introduces breaking changes`;
+        message += `\n\nBREAKING CHANGE: Este commit introduz mudanças incompatíveis`;
       }
 
       setGeneratedMessage(message);
       setIsLoading(false);
-      toast.success("Commit message generated!");
+      toast.success("Mensagem de commit gerada!");
     }, 800);
   };
 
@@ -118,12 +139,12 @@ export function CommitForm() {
       {/* Description */}
       <div className="space-y-3">
         <label className="text-sm font-medium text-foreground">
-          What did you do? <span className="text-destructive">*</span>
+          O que foi feito? <span className="text-destructive">*</span>
         </label>
         <textarea
           value={formData.description}
           onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-          placeholder="e.g., Added email validation to the signup form"
+          placeholder="ex: Adicionei validação de email no cadastro"
           rows={3}
           className={cn(
             "w-full px-3 py-2 rounded-lg border bg-card text-sm",
@@ -137,12 +158,12 @@ export function CommitForm() {
       {/* Reason */}
       <div className="space-y-3">
         <label className="text-sm font-medium text-foreground">
-          Why this change? <span className="text-muted-foreground">(optional)</span>
+          Por que essa mudança? <span className="text-muted-foreground">(opcional)</span>
         </label>
         <textarea
           value={formData.reason}
           onChange={(e) => setFormData((prev) => ({ ...prev, reason: e.target.value }))}
-          placeholder="e.g., To prevent invalid user registrations"
+          placeholder="ex: Para evitar cadastros de usuários inválidos"
           rows={2}
           className={cn(
             "w-full px-3 py-2 rounded-lg border bg-card text-sm",
@@ -179,7 +200,7 @@ export function CommitForm() {
         className="w-full"
       >
         <Sparkles className="h-5 w-5" />
-        Generate Commit Message
+        Gerar Mensagem de Commit
       </Button>
 
       {/* Output */}

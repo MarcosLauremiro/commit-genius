@@ -17,11 +17,11 @@ const Index = () => {
           {/* Hero Section */}
           <div className="text-center mb-10 animate-fade-in">
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3">
-              Write better commits,{" "}
-              <span className="text-gradient">faster</span>
+              Escreva commits melhores,{" "}
+              <span className="text-gradient">mais rápido</span>
             </h2>
             <p className="text-muted-foreground text-lg max-w-md mx-auto">
-              Generate professional, standardized commit messages in seconds with AI assistance.
+              Gere mensagens de commit profissionais e padronizadas em segundos com ajuda da IA.
             </p>
           </div>
 
@@ -32,11 +32,11 @@ const Index = () => {
 
           {/* Footer hint */}
           <p className="text-center text-xs text-muted-foreground mt-8">
-            Pro tip: Use{" "}
+            Dica: Use{" "}
             <kbd className="px-1.5 py-0.5 rounded bg-secondary font-mono text-[10px]">
               Ctrl + Enter
             </kbd>{" "}
-            to quickly generate
+            para gerar rapidamente
           </p>
         </div>
       </main>

@@ -14,7 +14,7 @@ export function Header() {
               CommitCraft
             </h1>
             <p className="text-xs text-muted-foreground hidden sm:block">
-              AI-powered commit messages
+              Mensagens de commit com IA
             </p>
           </div>
         </div>

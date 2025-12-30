@@ -7,6 +7,7 @@ import { CommitOutput } from "./CommitOutput";
 import { Sparkles, AlertTriangle, CloudOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Groq } from "groq-sdk";
 
 interface FormData {
   type: string;
@@ -17,32 +18,75 @@ interface FormData {
   tone: string;
 }
 
-// Função que será usada para chamar a IA via edge function
+// Função que será usada para chamar a IA via Gemini API
 async function generateWithAI(formData: FormData): Promise<string> {
-  // TODO: Implementar chamada para edge function com Lovable AI
-  // Exemplo de como será a chamada:
-  // const response = await supabase.functions.invoke('generate-commit', {
-  //   body: { 
-  //     type: formData.type,
-  //     scope: formData.scope,
-  //     description: formData.description,
-  //     reason: formData.reason,
-  //     breakingChange: formData.breakingChange,
-  //     tone: formData.tone
-  //   }
-  // });
-  // return response.data.message;
-  
-  throw new Error("AI_NOT_CONFIGURED");
+  // Use uma chave da Groq (gratuita em groq.com)
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("AI_NOT_CONFIGURED");
+  }
+
+  try {
+    const groq = new Groq({
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true // Necessário para apps client-side como React/Vite
+    });
+
+    const scopePart = formData.scope ? `(${formData.scope})` : "";
+    const breakingPrefix = formData.breakingChange ? "!" : "";
+
+    // Instruções de tom (mantendo sua lógica)
+    const toneInstructions: Record<string, string> = {
+      minimal: "Gere uma mensagem mínima e direta, apenas com o essencial.",
+      casual: "Gere uma mensagem casual e amigável, mas ainda profissional.",
+      professional: "Gere uma mensagem profissional e formal, seguindo rigorosamente o padrão Conventional Commits.",
+      detailed: "Gere uma mensagem detalhada com explicações completas, incluindo contexto e razões.",
+    };
+
+    const prompt = `Gere uma mensagem de commit seguindo o padrão Conventional Commits.
+Tipo: ${formData.type}${scopePart}${breakingPrefix}
+Descrição: ${formData.description}
+${formData.reason ? `Razão: ${formData.reason}` : ""}
+${formData.breakingChange ? "Esta mudança é um BREAKING CHANGE." : ""}
+Tom: ${formData.tone}
+Instrução de tom: ${toneInstructions[formData.tone] || toneInstructions.professional}
+
+REGRAS CRÍTICAS:
+- Formato: tipo(escopo): descrição
+- Descrição em INGLÊS começando com verbo no infinitivo (ex: add, fix, update)
+- Responda APENAS com a mensagem de commit final, sem introduções ou explicações.`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "Você é um especialista em Git e Conventional Commits. Responda apenas o texto do commit."
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      model: "llama-3.3-70b-versatile", // Modelo gratuito e muito potente
+      temperature: 0.2, // Menor temperatura para ser mais preciso
+    });
+
+    return chatCompletion.choices[0]?.message?.content?.trim() || "";
+
+  } catch (error) {
+    console.error("Erro Groq:", error);
+    throw new Error("Erro ao gerar commit com Groq");
+  }
 }
 
 // Fallback local para quando a IA não está configurada
 function generateLocalFallback(formData: FormData): string {
   const breakingPrefix = formData.breakingChange ? "!" : "";
   const scopePart = formData.scope ? `(${formData.scope})` : "";
-  
+
   let description = formData.description.trim();
-  
+
   // Mapeamento de verbos PT -> EN
   const verbMappings: Record<string, string> = {
     "adicionei": "add",
@@ -85,7 +129,7 @@ function generateLocalFallback(formData: FormData): string {
 
   let processedDesc = description.toLowerCase();
   let foundVerb = false;
-  
+
   for (const [pt, en] of Object.entries(verbMappings)) {
     if (processedDesc.startsWith(pt + " ")) {
       processedDesc = en + processedDesc.slice(pt.length);
@@ -114,11 +158,11 @@ function generateLocalFallback(formData: FormData): string {
     case "minimal":
       message = processedDesc;
       break;
-      
+
     case "casual":
       message = `${formData.type}${scopePart}${breakingPrefix}: ${processedDesc}`;
       break;
-      
+
     case "professional":
       const formalDesc = processedDesc.charAt(0).toUpperCase() + processedDesc.slice(1);
       message = `${formData.type}${scopePart}${breakingPrefix}: ${formalDesc}`;
@@ -126,15 +170,15 @@ function generateLocalFallback(formData: FormData): string {
         message += `\n\nReason: ${formData.reason}`;
       }
       break;
-      
+
     case "detailed":
       const detailedDesc = processedDesc.charAt(0).toUpperCase() + processedDesc.slice(1);
       message = `${formData.type}${scopePart}${breakingPrefix}: ${detailedDesc}`;
-      
+
       if (formData.reason) {
         message += `\n\n${formData.reason}`;
       }
-      
+
       const typeContext: Record<string, string> = {
         feat: "This commit introduces new functionality.",
         fix: "This commit resolves an existing issue.",
@@ -144,12 +188,12 @@ function generateLocalFallback(formData: FormData): string {
         test: "This commit adds or modifies tests.",
         style: "This commit includes styling changes.",
       };
-      
+
       if (typeContext[formData.type]) {
         message += `\n\n${typeContext[formData.type]}`;
       }
       break;
-      
+
     default:
       message = `${formData.type}${scopePart}${breakingPrefix}: ${processedDesc}`;
   }
@@ -199,11 +243,17 @@ export function CommitForm() {
         setGeneratedMessage(message);
         setIsAIEnabled(false);
         toast.info("Gerado localmente (IA não configurada)", {
-          description: "Conecte ao Lovable Cloud para usar IA real",
+          description: "Configure VITE_GEMINI_API_KEY no arquivo .env para usar IA",
         });
       } else {
-        toast.error("Erro ao gerar mensagem");
+        toast.error("Erro ao gerar mensagem com IA", {
+          description: error instanceof Error ? error.message : "Tente novamente",
+        });
         console.error(error);
+        // Em caso de erro, usa fallback local
+        const message = generateLocalFallback(formData);
+        setGeneratedMessage(message);
+        setIsAIEnabled(false);
       }
     } finally {
       setIsLoading(false);
@@ -221,7 +271,7 @@ export function CommitForm() {
         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border text-sm animate-fade-in">
           <CloudOff className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <p className="text-muted-foreground">
-            Usando geração local. Conecte ao <strong>Lovable Cloud</strong> para mensagens mais inteligentes com IA.
+            Usando geração local. Configure <strong>VITE_GEMINI_API_KEY</strong> no arquivo <code className="text-xs bg-muted px-1 py-0.5 rounded">.env</code> para usar IA do Google Gemini.
           </p>
         </div>
       )}

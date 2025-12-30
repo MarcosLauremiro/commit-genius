@@ -50,6 +50,20 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
+## Configuração da API do Gemini
+
+Para usar a geração de commits com IA, você precisa configurar a API key do Google Gemini:
+
+1. Obtenha sua API key em: https://makersuite.google.com/app/apikey
+2. Crie um arquivo `.env` na raiz do projeto
+3. Adicione a seguinte linha:
+   ```
+   VITE_GEMINI_API_KEY=sua_api_key_aqui
+   ```
+4. Reinicie o servidor de desenvolvimento
+
+**Nota:** Sem a API key configurada, o sistema usará um gerador local de commits como fallback.
+
 ## What technologies are used for this project?
 
 This project is built with:
@@ -59,6 +73,7 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Google Gemini AI (para geração de commits)
 
 ## How can I deploy this project?
 

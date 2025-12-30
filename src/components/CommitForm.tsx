@@ -16,6 +16,7 @@ interface FormData {
   reason: string;
   breakingChange: boolean;
   tone: string;
+  idioma: "ingles" | "português"
 }
 
 // Função que será usada para chamar a IA via Gemini API
@@ -54,7 +55,7 @@ Instrução de tom: ${toneInstructions[formData.tone] || toneInstructions.profes
 
 REGRAS CRÍTICAS:
 - Formato: tipo(escopo): descrição
-- Descrição em INGLÊS começando com verbo no infinitivo (ex: add, fix, update)
+- Descrição em ${formData.idioma} começando com verbo no infinitivo (ex: add, fix, update)
 - Responda APENAS com a mensagem de commit final, sem introduções ou explicações.`;
 
     const chatCompletion = await groq.chat.completions.create({
@@ -217,6 +218,7 @@ export function CommitForm() {
     reason: "",
     breakingChange: false,
     tone: "professional",
+    idioma: "ingles"
   });
   const [generatedMessage, setGeneratedMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -331,6 +333,39 @@ export function CommitForm() {
         value={formData.tone}
         onChange={(tone) => setFormData((prev) => ({ ...prev, tone }))}
       />
+
+      {/* Language Selector */}
+      <div className="space-y-3">
+        <label className="text-sm font-medium text-foreground">
+          Idioma da mensagem
+        </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setFormData((prev) => ({ ...prev, idioma: "ingles" }))}
+            className={cn(
+              "flex-1 px-4 py-2.5 rounded-lg border transition-all duration-200 text-sm font-medium",
+              formData.idioma === "ingles"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+            )}
+          >
+            🇺🇸 Inglês
+          </button>
+          <button
+            type="button"
+            onClick={() => setFormData((prev) => ({ ...prev, idioma: "português" }))}
+            className={cn(
+              "flex-1 px-4 py-2.5 rounded-lg border transition-all duration-200 text-sm font-medium",
+              formData.idioma === "português"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+            )}
+          >
+            🇧🇷 Português
+          </button>
+        </div>
+      </div>
 
       {/* Breaking Change */}
       <div className="flex items-center gap-3">
